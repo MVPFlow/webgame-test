@@ -1,5 +1,7 @@
 export const KENNEY_BG_SOLID_SKY = 'kenney-bg-solid-sky';
 export const KENNEY_BG_COLOR_HILLS = 'kenney-bg-color-hills';
+export const KENNEY_BG_COLOR_DESERT = 'kenney-bg-color-desert';
+export const KENNEY_BG_CLOUDS = 'kenney-bg-clouds';
 
 export const PLAYER_WALK_A = 'kenney-player-walk-a';
 export const PLAYER_WALK_B = 'kenney-player-walk-b';
@@ -15,6 +17,8 @@ const KENNEY_BASE_PATH = 'assets/kenney';
 
 export const KENNEY_BG_SOLID_SKY_PATH = `${KENNEY_BASE_PATH}/backgrounds/background_solid_sky.png`;
 export const KENNEY_BG_COLOR_HILLS_PATH = `${KENNEY_BASE_PATH}/backgrounds/background_color_hills.png`;
+export const KENNEY_BG_COLOR_DESERT_PATH = `${KENNEY_BASE_PATH}/backgrounds/background_color_desert.png`;
+export const KENNEY_BG_CLOUDS_PATH = `${KENNEY_BASE_PATH}/backgrounds/background_clouds.png`;
 
 export const PLAYER_WALK_A_PATH = `${KENNEY_BASE_PATH}/player/walk/character_beige_walk_a.png`;
 export const PLAYER_WALK_B_PATH = `${KENNEY_BASE_PATH}/player/walk/character_beige_walk_b.png`;

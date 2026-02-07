@@ -2,7 +2,14 @@ import Phaser from 'phaser';
 
 import { PLAYER_ANIM_IDLE, PLAYER_ANIM_WALK, registerKenneyAnims } from '../assets/anims';
 import { loadKenneyAssets } from '../assets/loadKenney';
-import { COIN_1, ENEMY_BLOCK_1, ENEMY_BLOCK_2, KENNEY_BG_SOLID_SKY, PLAYER_IDLE } from '../assets/kenney';
+import {
+  COIN_1,
+  ENEMY_BLOCK_1,
+  ENEMY_BLOCK_2,
+  KENNEY_BG_CLOUDS,
+  KENNEY_BG_COLOR_DESERT,
+  PLAYER_IDLE
+} from '../assets/kenney';
 
 type SpawnType = 'obstacle' | 'coin';
 
@@ -15,6 +22,8 @@ const BASE_SPAWN_INTERVAL = 900;
 const MIN_SPAWN_INTERVAL = 320;
 const COIN_CHANCE = 0.22;
 const COIN_SCALE = 0.55;
+const CLOUD_SCROLL_SPEED = 0.02;
+const BASE_BG_COLOR = 0x9fd7ff;
 
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -29,6 +38,9 @@ export class GameScene extends Phaser.Scene {
   private statusText!: Phaser.GameObjects.Text;
   private coinsCollected = 0;
   private gameOver = false;
+  private baseColor!: Phaser.GameObjects.Rectangle;
+  private desertBackground!: Phaser.GameObjects.Image;
+  private cloudLayer!: Phaser.GameObjects.TileSprite;
 
   constructor() {
     super('game');
@@ -39,7 +51,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
-    this.add.image(0, 0, KENNEY_BG_SOLID_SKY).setOrigin(0).setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
+    const { width, height } = this.scale;
+    this.baseColor = this.add.rectangle(0, 0, width, height, BASE_BG_COLOR).setOrigin(0).setDepth(-30);
+    this.desertBackground = this.add.image(0, 0, KENNEY_BG_COLOR_DESERT).setOrigin(0).setDepth(-20);
+    this.cloudLayer = this.add.tileSprite(0, 0, width, height, KENNEY_BG_CLOUDS).setOrigin(0).setDepth(-10);
+    this.resizeBackgrounds(width, height);
+    this.scale.on(Phaser.Scale.Events.RESIZE, (gameSize: Phaser.Structs.Size) => {
+      this.resizeBackgrounds(gameSize.width, gameSize.height);
+    });
 
     registerKenneyAnims(this);
 
@@ -90,7 +109,9 @@ export class GameScene extends Phaser.Scene {
     this.coinsCollected = 0;
   }
 
-  update(time: number) {
+  update(time: number, delta: number) {
+    this.cloudLayer.tilePositionX += delta * CLOUD_SCROLL_SPEED;
+
     if (this.gameOver) {
       if (this.keys.SPACE.isDown) {
         this.scene.restart();
@@ -197,4 +218,11 @@ export class GameScene extends Phaser.Scene {
     this.input.once('pointerdown', () => this.scene.restart());
   }
 
+  private resizeBackgrounds(width: number, height: number) {
+    this.baseColor.setSize(width, height);
+    this.baseColor.setDisplaySize(width, height);
+    this.desertBackground.setDisplaySize(width, height);
+    this.cloudLayer.setSize(width, height);
+    this.cloudLayer.setDisplaySize(width, height);
+  }
 }

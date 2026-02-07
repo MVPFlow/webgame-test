@@ -3,6 +3,10 @@ import type Phaser from 'phaser';
 import {
   KENNEY_BG_COLOR_HILLS,
   KENNEY_BG_COLOR_HILLS_PATH,
+  KENNEY_BG_COLOR_DESERT,
+  KENNEY_BG_COLOR_DESERT_PATH,
+  KENNEY_BG_CLOUDS,
+  KENNEY_BG_CLOUDS_PATH,
   KENNEY_BG_SOLID_SKY,
   KENNEY_BG_SOLID_SKY_PATH,
   HAZARD_CRATE,
@@ -28,6 +32,8 @@ import {
 export const loadKenneyAssets = (scene: Phaser.Scene) => {
   scene.load.image(KENNEY_BG_SOLID_SKY, KENNEY_BG_SOLID_SKY_PATH);
   scene.load.image(KENNEY_BG_COLOR_HILLS, KENNEY_BG_COLOR_HILLS_PATH);
+  scene.load.image(KENNEY_BG_COLOR_DESERT, KENNEY_BG_COLOR_DESERT_PATH);
+  scene.load.image(KENNEY_BG_CLOUDS, KENNEY_BG_CLOUDS_PATH);
 
   scene.load.image(PLAYER_WALK_A, PLAYER_WALK_A_PATH);
   scene.load.image(PLAYER_WALK_B, PLAYER_WALK_B_PATH);

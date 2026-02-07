@@ -4,6 +4,7 @@ import { PLAYER_IDLE, PLAYER_WALK_A, PLAYER_WALK_B } from './kenney';
 
 export const PLAYER_ANIM_IDLE = 'player-idle';
 export const PLAYER_ANIM_WALK = 'player-walk';
+export const PLAYER_ANIM_JUMP = 'player-jump';
 
 export const registerKenneyAnims = (scene: Phaser.Scene) => {
   if (!scene.anims.exists(PLAYER_ANIM_WALK)) {
@@ -18,6 +19,15 @@ export const registerKenneyAnims = (scene: Phaser.Scene) => {
   if (!scene.anims.exists(PLAYER_ANIM_IDLE)) {
     scene.anims.create({
       key: PLAYER_ANIM_IDLE,
+      frames: [{ key: PLAYER_IDLE }],
+      frameRate: 1,
+      repeat: -1
+    });
+  }
+
+  if (!scene.anims.exists(PLAYER_ANIM_JUMP)) {
+    scene.anims.create({
+      key: PLAYER_ANIM_JUMP,
       frames: [{ key: PLAYER_IDLE }],
       frameRate: 1,
       repeat: -1

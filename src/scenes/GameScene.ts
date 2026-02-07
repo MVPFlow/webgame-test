@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 
-import { PLAYER_ANIM_IDLE, PLAYER_ANIM_WALK, registerKenneyAnims } from '../assets/anims';
+import { PLAYER_ANIM_IDLE, PLAYER_ANIM_JUMP, PLAYER_ANIM_WALK, registerKenneyAnims } from '../assets/anims';
 import { loadKenneyAssets } from '../assets/loadKenney';
 import {
   COIN_1,
@@ -18,6 +18,7 @@ type SpawnType = 'obstacle' | 'coin';
 const GAME_WIDTH = 480;
 const GAME_HEIGHT = 800;
 const PLAYER_SPEED = 360;
+const JUMP_VELOCITY = -520;
 const BASE_FALL_SPEED = 180;
 const FALL_SPEED_INCREASE = 12;
 const BASE_SPAWN_INTERVAL = 900;
@@ -170,6 +171,8 @@ export class GameScene extends Phaser.Scene {
     let direction = this.moveDirection;
     const left = this.cursors.left?.isDown || this.keys.A.isDown;
     const right = this.cursors.right?.isDown || this.keys.D.isDown;
+    const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
+    const isGrounded = playerBody.blocked.down || playerBody.touching.down;
 
     if (left) {
       direction = -1;
@@ -177,7 +180,16 @@ export class GameScene extends Phaser.Scene {
       direction = 1;
     }
 
+    if (isGrounded && Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
+      this.player.setVelocityY(JUMP_VELOCITY);
+    }
+
     this.player.setVelocityX(direction * PLAYER_SPEED);
+
+    if (!isGrounded) {
+      this.player.anims.play(PLAYER_ANIM_JUMP, true);
+      return;
+    }
 
     if (direction === 0) {
       this.player.anims.play(PLAYER_ANIM_IDLE, true);

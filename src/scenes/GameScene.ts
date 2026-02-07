@@ -8,7 +8,9 @@ import {
   ENEMY_BLOCK_2,
   KENNEY_BG_CLOUDS,
   KENNEY_BG_COLOR_DESERT,
-  PLAYER_IDLE
+  PLAYER_IDLE,
+  TERRAIN_GRASS_BOTTOM,
+  TERRAIN_GRASS_TOP
 } from '../assets/kenney';
 
 type SpawnType = 'obstacle' | 'coin';
@@ -62,17 +64,41 @@ export class GameScene extends Phaser.Scene {
 
     registerKenneyAnims(this);
 
+    const groundTopTexture = this.textures.get(TERRAIN_GRASS_TOP);
+    const groundBottomTexture = this.textures.get(TERRAIN_GRASS_BOTTOM);
+    const groundTopSource = groundTopTexture.getSourceImage() as HTMLImageElement | HTMLCanvasElement | HTMLVideoElement;
+    const groundBottomSource = groundBottomTexture.getSourceImage() as HTMLImageElement | HTMLCanvasElement | HTMLVideoElement;
+    const groundTileWidth = groundTopSource?.width ?? 32;
+    const groundTopHeight = groundTopSource?.height ?? 32;
+    const groundBottomHeight = groundBottomSource?.height ?? 32;
+    const groundTopY = GAME_HEIGHT - (groundTopHeight + groundBottomHeight);
+    const groundBottomY = groundTopY + groundTopHeight;
+    const tilesAcross = Math.ceil(GAME_WIDTH / groundTileWidth) + 1;
+    const groundVisuals = this.add.group();
+    const groundColliders = this.physics.add.staticGroup();
+
+    for (let i = 0; i < tilesAcross; i += 1) {
+      const x = i * groundTileWidth;
+      const bottomTile = this.add.image(x, groundBottomY, TERRAIN_GRASS_BOTTOM).setOrigin(0, 0);
+      groundVisuals.add(bottomTile);
+      const topTile = groundColliders.create(x, groundTopY, TERRAIN_GRASS_TOP) as Phaser.Physics.Arcade.Image;
+      topTile.setOrigin(0, 0);
+      topTile.refreshBody();
+    }
+
     this.player = this.physics.add.sprite(GAME_WIDTH / 2, GAME_HEIGHT - 90, PLAYER_IDLE);
     const playerBodyWidth = this.player.width * 0.65;
     const playerBodyHeight = this.player.height * 0.78;
     this.player.setSize(playerBodyWidth, playerBodyHeight);
     this.player.setOffset((this.player.width - playerBodyWidth) / 2, this.player.height - playerBodyHeight);
     this.player.setCollideWorldBounds(true);
+    this.player.setGravityY(900);
     this.player.anims.play(PLAYER_ANIM_IDLE);
 
     this.obstacles = this.physics.add.group({ classType: Phaser.Physics.Arcade.Sprite });
     this.coins = this.physics.add.group({ classType: Phaser.Physics.Arcade.Image });
 
+    this.physics.add.collider(this.player, groundColliders);
     this.physics.add.collider(this.player, this.obstacles, () => this.handleGameOver());
     this.physics.add.overlap(this.player, this.coins, (_player, coin) => {
       const target = coin as Phaser.Physics.Arcade.Image;

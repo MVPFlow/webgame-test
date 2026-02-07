@@ -39,13 +39,13 @@ export class GameScene extends Phaser.Scene {
     this.coins = this.physics.add.group();
 
     this.physics.add.collider(this.player, this.obstacles, () => this.handleGameOver());
-    this.physics.add.overlap(this.player, this.coins, (_: Phaser.GameObjects.GameObject, coin: Phaser.GameObjects.GameObject) => {
-      coin.destroy();
+    this.physics.add.overlap(this.player, this.coins, (_player, coin) => {
+      (coin as Phaser.GameObjects.GameObject).destroy();
       this.coinsCollected += 1;
     });
 
-    this.cursors = this.input.keyboard.createCursorKeys();
-    this.keys = this.input.keyboard.addKeys('A,D,SPACE') as { A: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key; SPACE: Phaser.Input.Keyboard.Key };
+    this.cursors = this.input.keyboard!.createCursorKeys();
+    this.keys = this.input.keyboard!.addKeys('A,D,SPACE') as { A: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key; SPACE: Phaser.Input.Keyboard.Key };
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       this.moveDirection = pointer.x < GAME_WIDTH / 2 ? -1 : 1;
@@ -133,6 +133,7 @@ export class GameScene extends Phaser.Scene {
       if (sprite.y > GAME_HEIGHT + 60) {
         sprite.destroy();
       }
+      return true;
     });
 
     this.coins.children.each((child: Phaser.GameObjects.GameObject) => {
@@ -140,6 +141,7 @@ export class GameScene extends Phaser.Scene {
       if (sprite.y > GAME_HEIGHT + 60) {
         sprite.destroy();
       }
+      return true;
     });
   }
 

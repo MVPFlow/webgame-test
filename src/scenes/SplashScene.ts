@@ -18,6 +18,8 @@ export class SplashScene extends Phaser.Scene {
   private backgroundImage!: Phaser.GameObjects.Image;
   private startTriggered = false;
   private resizeHandler?: (gameSize: Phaser.Structs.Size) => void;
+  private pointerDownHandler?: () => void;
+  private keyDownHandler?: (event: KeyboardEvent) => void;
 
   constructor() {
     super('splash');
@@ -28,6 +30,7 @@ export class SplashScene extends Phaser.Scene {
   }
 
   create() {
+    this.startTriggered = false;
     const { width, height } = this.scale;
     this.backgroundImage = this.add.image(width / 2, height / 2, SPLASH_SCREEN_BG);
     this.backgroundImage.setDepth(0);
@@ -75,13 +78,15 @@ export class SplashScene extends Phaser.Scene {
       this.startGame();
     };
 
-    this.input.once('pointerdown', handleStart);
-    this.input.keyboard?.once('keydown', (event: KeyboardEvent) => {
+    this.pointerDownHandler = handleStart;
+    this.input.once('pointerdown', this.pointerDownHandler);
+    this.keyDownHandler = (event: KeyboardEvent) => {
       if (event.repeat) {
         return;
       }
       handleStart();
-    });
+    };
+    this.input.keyboard?.once('keydown', this.keyDownHandler);
 
     if (!this.sound.locked) {
       this.startSplashMusic();
@@ -97,6 +102,12 @@ export class SplashScene extends Phaser.Scene {
       this.audioManager.stopMusic();
       if (this.resizeHandler) {
         this.scale.off(Phaser.Scale.Events.RESIZE, this.resizeHandler);
+      }
+      if (this.pointerDownHandler) {
+        this.input.off('pointerdown', this.pointerDownHandler);
+      }
+      if (this.keyDownHandler) {
+        this.input.keyboard?.off('keydown', this.keyDownHandler);
       }
     });
   }

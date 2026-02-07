@@ -1,0 +1,184 @@
+import Phaser from 'phaser';
+
+type SpawnType = 'obstacle' | 'coin';
+
+const GAME_WIDTH = 480;
+const GAME_HEIGHT = 800;
+const PLAYER_SPEED = 360;
+const BASE_FALL_SPEED = 180;
+const FALL_SPEED_INCREASE = 12;
+const BASE_SPAWN_INTERVAL = 900;
+const MIN_SPAWN_INTERVAL = 320;
+const COIN_CHANCE = 0.22;
+
+export class GameScene extends Phaser.Scene {
+  private player!: Phaser.Physics.Arcade.Sprite;
+  private obstacles!: Phaser.Physics.Arcade.Group;
+  private coins!: Phaser.Physics.Arcade.Group;
+  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+  private keys!: { A: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key; SPACE: Phaser.Input.Keyboard.Key };
+  private moveDirection = 0;
+  private startTime = 0;
+  private lastSpawnTime = 0;
+  private scoreText!: Phaser.GameObjects.Text;
+  private statusText!: Phaser.GameObjects.Text;
+  private coinsCollected = 0;
+  private gameOver = false;
+
+  constructor() {
+    super('game');
+  }
+
+  create() {
+    this.createTextures();
+
+    this.player = this.physics.add.sprite(GAME_WIDTH / 2, GAME_HEIGHT - 90, 'player');
+    this.player.setCollideWorldBounds(true);
+
+    this.obstacles = this.physics.add.group();
+    this.coins = this.physics.add.group();
+
+    this.physics.add.collider(this.player, this.obstacles, () => this.handleGameOver());
+    this.physics.add.overlap(this.player, this.coins, (_, coin) => {
+      coin.destroy();
+      this.coinsCollected += 1;
+    });
+
+    this.cursors = this.input.keyboard.createCursorKeys();
+    this.keys = this.input.keyboard.addKeys('A,D,SPACE') as { A: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key; SPACE: Phaser.Input.Keyboard.Key };
+
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      this.moveDirection = pointer.x < GAME_WIDTH / 2 ? -1 : 1;
+    });
+
+    this.input.on('pointerup', () => {
+      this.moveDirection = 0;
+    });
+
+    this.scoreText = this.add.text(24, 20, '', {
+      fontSize: '20px',
+      color: '#f6f7fb'
+    });
+
+    this.statusText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '', {
+      fontSize: '28px',
+      color: '#f6f7fb',
+      align: 'center'
+    });
+    this.statusText.setOrigin(0.5);
+
+    this.startTime = this.time.now;
+    this.lastSpawnTime = this.time.now;
+    this.gameOver = false;
+    this.coinsCollected = 0;
+  }
+
+  update(time: number) {
+    if (this.gameOver) {
+      if (this.keys.SPACE.isDown) {
+        this.scene.restart();
+      }
+      return;
+    }
+
+    this.handleMovement();
+    this.handleSpawning(time);
+    this.cleanupOffscreen();
+    this.updateScore(time);
+  }
+
+  private handleMovement() {
+    let direction = this.moveDirection;
+    const left = this.cursors.left?.isDown || this.keys.A.isDown;
+    const right = this.cursors.right?.isDown || this.keys.D.isDown;
+
+    if (left) {
+      direction = -1;
+    } else if (right) {
+      direction = 1;
+    }
+
+    this.player.setVelocityX(direction * PLAYER_SPEED);
+  }
+
+  private handleSpawning(time: number) {
+    const elapsedSeconds = (time - this.startTime) / 1000;
+    const fallSpeed = BASE_FALL_SPEED + elapsedSeconds * FALL_SPEED_INCREASE;
+    const spawnInterval = Math.max(
+      MIN_SPAWN_INTERVAL,
+      BASE_SPAWN_INTERVAL - elapsedSeconds * 12
+    );
+
+    if (time - this.lastSpawnTime < spawnInterval) {
+      return;
+    }
+
+    this.lastSpawnTime = time;
+    const spawnType: SpawnType = Math.random() < COIN_CHANCE ? 'coin' : 'obstacle';
+    const x = Phaser.Math.Between(40, GAME_WIDTH - 40);
+    const y = -30;
+
+    if (spawnType === 'coin') {
+      const coin = this.coins.create(x, y, 'coin') as Phaser.Physics.Arcade.Sprite;
+      coin.setVelocityY(fallSpeed * 0.9);
+    } else {
+      const obstacle = this.obstacles.create(x, y, 'obstacle') as Phaser.Physics.Arcade.Sprite;
+      obstacle.setVelocityY(fallSpeed);
+    }
+  }
+
+  private cleanupOffscreen() {
+    this.obstacles.children.each((child) => {
+      const sprite = child as Phaser.Physics.Arcade.Sprite;
+      if (sprite.y > GAME_HEIGHT + 60) {
+        sprite.destroy();
+      }
+    });
+
+    this.coins.children.each((child) => {
+      const sprite = child as Phaser.Physics.Arcade.Sprite;
+      if (sprite.y > GAME_HEIGHT + 60) {
+        sprite.destroy();
+      }
+    });
+  }
+
+  private updateScore(time: number) {
+    const elapsedSeconds = Math.max(0, (time - this.startTime) / 1000);
+    const scoreValue = Math.floor(elapsedSeconds * 10 + this.coinsCollected * 50);
+    this.scoreText.setText(`Score: ${scoreValue}  |  Tiempo: ${elapsedSeconds.toFixed(1)}s  |  Monedas: ${this.coinsCollected}`);
+  }
+
+  private handleGameOver() {
+    if (this.gameOver) {
+      return;
+    }
+
+    this.gameOver = true;
+    this.player.setVelocity(0, 0);
+    this.obstacles.setVelocityY(0);
+    this.coins.setVelocityY(0);
+    this.statusText.setText('Game Over\nTap o presiona Espacio para reiniciar');
+    this.input.once('pointerdown', () => this.scene.restart());
+  }
+
+  private createTextures() {
+    const graphics = this.add.graphics();
+
+    graphics.fillStyle(0x67d5ff, 1);
+    graphics.fillRoundedRect(0, 0, 60, 24, 10);
+    graphics.generateTexture('player', 60, 24);
+
+    graphics.clear();
+    graphics.fillStyle(0xff4d6d, 1);
+    graphics.fillRoundedRect(0, 0, 38, 38, 8);
+    graphics.generateTexture('obstacle', 38, 38);
+
+    graphics.clear();
+    graphics.fillStyle(0xffd166, 1);
+    graphics.fillCircle(14, 14, 14);
+    graphics.generateTexture('coin', 28, 28);
+
+    graphics.destroy();
+  }
+}

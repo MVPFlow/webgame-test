@@ -26,6 +26,8 @@ Estas reglas son permanentes y deben cumplirse en cualquier cambio futuro del re
 6) Validación
    - Antes de terminar, correr los scripts disponibles (build/lint/test).
    - Si no se pueden ejecutar en el entorno, indicarlo y dar pasos manuales.
+7) Phaser + TypeScript
+   - All Phaser + TypeScript work MUST follow docs/custom-types/PHASER_TYPES_RULES.md
 
 ## Cómo pedir trabajo a Codex
 Usa este mini-formato de prompt recomendado:

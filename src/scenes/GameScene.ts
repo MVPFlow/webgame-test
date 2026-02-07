@@ -28,11 +28,12 @@ const COIN_CHANCE = 0.22;
 const COIN_SCALE = 0.55;
 const CLOUD_SCROLL_SPEED = 0.006;
 const BASE_BG_COLOR = 0x9fd7ff;
-const HUD_HEIGHT = 52;
-const HUD_PADDING = 16;
+const HUD_HEIGHT = 44;
+const HUD_PADDING = 12;
 const HUD_DEPTH = 10;
 const HUD_TEXT_DEPTH = 12;
 const HUD_COIN_SCALE = 0.35;
+const HUD_COIN_GAP = 6;
 
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -48,6 +49,7 @@ export class GameScene extends Phaser.Scene {
   private timeText!: Phaser.GameObjects.Text;
   private coinIcon!: Phaser.GameObjects.Image;
   private coinText!: Phaser.GameObjects.Text;
+  private coinGroup!: Phaser.GameObjects.Container;
   private hudBackground!: Phaser.GameObjects.Image;
   private coinsCollected = 0;
   private gameOver = false;
@@ -262,8 +264,8 @@ export class GameScene extends Phaser.Scene {
   private updateScore(time: number) {
     const elapsedSeconds = Math.max(0, (time - this.startTime) / 1000);
     const scoreValue = Math.floor(elapsedSeconds * 10 + this.coinsCollected * 50);
-    this.scoreText.setText(`Score: ${scoreValue}`);
-    this.timeText.setText(`Tiempo: ${elapsedSeconds.toFixed(1)}s`);
+    this.scoreText.setText(`${scoreValue}`);
+    this.timeText.setText(`${elapsedSeconds.toFixed(1)}s`);
     this.coinText.setText(`${this.coinsCollected}`);
     this.layoutHud(this.scale.width);
   }
@@ -298,10 +300,10 @@ export class GameScene extends Phaser.Scene {
     this.hudBackground.setDisplaySize(viewportWidth, HUD_HEIGHT);
 
     const textStyle: Phaser.Types.GameObjects.Text.TextStyle = {
-      fontSize: '20px',
+      fontSize: '18px',
       color: '#f6f7fb',
       stroke: '#1d1e2c',
-      strokeThickness: 3
+      strokeThickness: 2
     };
 
     this.scoreText = this.add.text(0, 0, '', textStyle).setOrigin(0, 0.5);
@@ -316,6 +318,9 @@ export class GameScene extends Phaser.Scene {
 
     this.coinText = this.add.text(0, 0, '', textStyle).setOrigin(0, 0.5);
     this.coinText.setDepth(HUD_TEXT_DEPTH);
+
+    this.coinGroup = this.add.container(0, 0, [this.coinIcon, this.coinText]);
+    this.coinGroup.setDepth(HUD_TEXT_DEPTH);
 
     this.resizeHud(viewportWidth);
   }
@@ -333,11 +338,12 @@ export class GameScene extends Phaser.Scene {
 
     const coinTextWidth = this.coinText.width;
     const coinIconWidth = this.coinIcon.displayWidth;
-    const coinTextX = viewportWidth - HUD_PADDING - coinTextWidth;
-    const coinIconX = coinTextX - 8 - coinIconWidth;
+    const coinBlockWidth = coinIconWidth + HUD_COIN_GAP + coinTextWidth;
+    const coinBlockX = viewportWidth - HUD_PADDING - coinBlockWidth;
 
-    this.coinIcon.setPosition(coinIconX, centerY);
-    this.coinText.setPosition(coinTextX, centerY);
+    this.coinIcon.setPosition(0, 0);
+    this.coinText.setPosition(coinIconWidth + HUD_COIN_GAP, 0);
+    this.coinGroup.setPosition(coinBlockX, centerY);
   }
 
   private getCloudBandHeight(viewportHeight: number) {

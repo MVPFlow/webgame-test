@@ -50,8 +50,12 @@ const GAME_OVER_PANEL_MAX_HEIGHT = 0.6;
 const GAME_OVER_PANEL_DEPTH = 110;
 const GAME_OVER_OVERLAY_DEPTH = 100;
 const GAME_OVER_TEXT_DEPTH = 120;
+const GAME_OVER_BACK_PLATE_TINT = 0x6c717f;
 const GAME_OVER_BUTTON_HOVER_SCALE = 1.03;
 const GAME_OVER_BUTTON_PRESS_SCALE = 0.97;
+const GAME_OVER_BACK_PLATE_EXTRA = 18;
+const GAME_OVER_BACK_PLATE_OFFSET_X = 6;
+const GAME_OVER_BACK_PLATE_OFFSET_Y = 8;
 const FISH_SPAWN_INTERVAL = 2600;
 const FISH_SPAWN_VARIANCE = 900;
 const FISH_SPAWN_MARGIN = 40;
@@ -103,6 +107,7 @@ export class GameScene extends Phaser.Scene {
   private groundTopY = 0;
   private gameOverOverlay?: Phaser.GameObjects.Rectangle;
   private gameOverContainer?: Phaser.GameObjects.Container;
+  private gameOverBackPlate?: Phaser.GameObjects.Image;
   private gameOverPanel?: Phaser.GameObjects.Image;
   private gameOverPanelWidth = 0;
   private gameOverPanelHeight = 0;
@@ -113,6 +118,9 @@ export class GameScene extends Phaser.Scene {
   private audioManager = new AudioManager();
   private nextStepSfxTime = 0;
   private nextSlideSfxTime = 0;
+  private pointerDownHandler?: (pointer: Phaser.Input.Pointer) => void;
+  private pointerUpHandler?: () => void;
+  private keyDownHandler?: (event: KeyboardEvent) => void;
 
   constructor() {
     super('game');
@@ -212,21 +220,23 @@ export class GameScene extends Phaser.Scene {
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.keys = this.input.keyboard!.addKeys('A,D,SPACE') as { A: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key; SPACE: Phaser.Input.Keyboard.Key };
 
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+    this.pointerDownHandler = (pointer: Phaser.Input.Pointer) => {
       if (this.gameOver) {
         return;
       }
       this.moveDirection = pointer.x < GAME_WIDTH / 2 ? -1 : 1;
-    });
+    };
+    this.input.on('pointerdown', this.pointerDownHandler);
 
-    this.input.on('pointerup', () => {
+    this.pointerUpHandler = () => {
       if (this.gameOver) {
         return;
       }
       this.moveDirection = 0;
-    });
+    };
+    this.input.on('pointerup', this.pointerUpHandler);
 
-    this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
+    this.keyDownHandler = (event: KeyboardEvent) => {
       if (event.repeat) {
         return;
       }
@@ -234,7 +244,8 @@ export class GameScene extends Phaser.Scene {
         return;
       }
       this.handleDoubleTap(event);
-    });
+    };
+    this.input.keyboard?.on('keydown', this.keyDownHandler);
 
     this.createHud(width);
 
@@ -268,6 +279,15 @@ export class GameScene extends Phaser.Scene {
       this.audioManager.stopMusic();
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
       this.destroyGameOverModal();
+      if (this.pointerDownHandler) {
+        this.input.off('pointerdown', this.pointerDownHandler);
+      }
+      if (this.pointerUpHandler) {
+        this.input.off('pointerup', this.pointerUpHandler);
+      }
+      if (this.keyDownHandler) {
+        this.input.keyboard?.off('keydown', this.keyDownHandler);
+      }
     });
   }
 
@@ -454,6 +474,11 @@ export class GameScene extends Phaser.Scene {
     this.gameOverPanelWidth = panelSource?.width ?? 420;
     this.gameOverPanelHeight = panelSource?.height ?? 320;
 
+    this.gameOverBackPlate = this.add.image(0, 0, UI_RECTANGLE_GRADIENT).setOrigin(0.5);
+    this.gameOverBackPlate.setTint(GAME_OVER_BACK_PLATE_TINT);
+    this.gameOverBackPlate.setAlpha(0.7);
+    this.gameOverBackPlate.setScrollFactor(0);
+
     this.gameOverPanel = this.add.image(0, 0, UI_RECTANGLE_DEPTH_LINE).setOrigin(0.5);
     this.gameOverPanel.setScrollFactor(0);
 
@@ -489,8 +514,7 @@ export class GameScene extends Phaser.Scene {
       this.scene.restart();
     });
     const homeButton = this.createGameOverButton('Inicio', buttonStyle, () => {
-      this.destroyGameOverModal();
-      this.scene.start('splash');
+      this.exitToSplash();
     });
 
     this.gameOverArrow = this.add.image(0, 0, UI_ARROW_BACK).setOrigin(0.5);
@@ -506,12 +530,12 @@ export class GameScene extends Phaser.Scene {
       this.gameOverArrow?.setScale(GAME_OVER_BUTTON_PRESS_SCALE);
     });
     this.gameOverArrow.on('pointerup', () => {
-      this.destroyGameOverModal();
-      this.scene.start('splash');
+      this.exitToSplash();
     });
 
     this.gameOverButtons = [retryButton, homeButton];
     this.gameOverContainer = this.add.container(0, 0, [
+      this.gameOverBackPlate,
       this.gameOverPanel,
       this.gameOverTitleText,
       this.gameOverScoreText,
@@ -555,7 +579,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   private layoutGameOverModal(viewportWidth: number, viewportHeight: number, animate = false) {
-    if (!this.gameOverContainer || !this.gameOverPanel || !this.gameOverTitleText || !this.gameOverScoreText) {
+    if (
+      !this.gameOverContainer ||
+      !this.gameOverPanel ||
+      !this.gameOverBackPlate ||
+      !this.gameOverTitleText ||
+      !this.gameOverScoreText
+    ) {
       return;
     }
 
@@ -564,8 +594,8 @@ export class GameScene extends Phaser.Scene {
     const maxPanelWidth = viewportWidth * GAME_OVER_PANEL_MAX_WIDTH;
     const maxPanelHeight = viewportHeight * GAME_OVER_PANEL_MAX_HEIGHT;
     const baseScale = Math.min(maxPanelWidth / panelWidth, maxPanelHeight / panelHeight);
-    const minPanelHeight = Math.min(320, viewportHeight * 0.8);
-    const desiredMinHeight = Math.max(240, minPanelHeight);
+    const minPanelHeight = Math.min(340, viewportHeight * 0.82);
+    const desiredMinHeight = Math.max(300, minPanelHeight);
     const minHeightScale = desiredMinHeight / panelHeight;
     const panelScale = Math.min(Math.max(baseScale, minHeightScale), maxPanelWidth / panelWidth, maxPanelHeight / panelHeight);
     const panelDisplayWidth = panelWidth * panelScale;
@@ -577,9 +607,14 @@ export class GameScene extends Phaser.Scene {
     this.gameOverContainer.setPosition(viewportWidth / 2, viewportHeight / 2);
     this.gameOverPanel.setScale(1);
     this.gameOverPanel.setDisplaySize(panelDisplayWidth, panelDisplayHeight);
+    this.gameOverBackPlate.setDisplaySize(
+      panelDisplayWidth + GAME_OVER_BACK_PLATE_EXTRA,
+      panelDisplayHeight + GAME_OVER_BACK_PLATE_EXTRA
+    );
+    this.gameOverBackPlate.setPosition(GAME_OVER_BACK_PLATE_OFFSET_X, GAME_OVER_BACK_PLATE_OFFSET_Y);
 
-    const paddingX = Math.round(Math.min(32, Math.max(18, panelDisplayWidth * 0.08)));
-    const paddingY = Math.round(Math.min(26, Math.max(14, panelDisplayHeight * 0.07)));
+    const paddingX = Math.round(Math.min(36, Math.max(20, panelDisplayWidth * 0.1)));
+    const paddingY = Math.round(Math.min(36, Math.max(22, panelDisplayHeight * 0.12)));
     const wrapWidth = Math.max(120, panelDisplayWidth - paddingX * 2);
     const titleFontSize = Math.round(Phaser.Math.Clamp(36 * panelScale, 32, 38));
     const scoreFontSize = Math.round(Phaser.Math.Clamp(24 * panelScale, 22, 26));
@@ -591,8 +626,8 @@ export class GameScene extends Phaser.Scene {
 
     const titleHeight = this.gameOverTitleText.getBounds().height;
     const scoreHeight = this.gameOverScoreText.getBounds().height;
-    let verticalSpacing = Math.max(14, panelDisplayHeight * 0.06);
-    let buttonSpacing = Math.max(12, panelDisplayHeight * 0.05);
+    let verticalSpacing = Math.max(18, panelDisplayHeight * 0.08);
+    let buttonSpacing = Math.max(16, panelDisplayHeight * 0.06);
     const buttonWidth = panelDisplayWidth - paddingX * 2;
     const baseButtonHeight = Math.max(44, panelDisplayHeight * 0.16);
     const retryButtonHeight = baseButtonHeight * 1.08;
@@ -662,12 +697,20 @@ export class GameScene extends Phaser.Scene {
     this.gameOverTitleText = undefined;
     this.gameOverScoreText?.destroy();
     this.gameOverScoreText = undefined;
+    this.gameOverBackPlate?.destroy();
+    this.gameOverBackPlate = undefined;
     this.gameOverPanel?.destroy();
     this.gameOverPanel = undefined;
     this.gameOverContainer?.destroy(true);
     this.gameOverContainer = undefined;
     this.gameOverOverlay?.destroy();
     this.gameOverOverlay = undefined;
+  }
+
+  private exitToSplash() {
+    this.destroyGameOverModal();
+    this.scene.stop('game');
+    this.scene.start('splash');
   }
 
   private handleResize(gameSize: Phaser.Structs.Size) {

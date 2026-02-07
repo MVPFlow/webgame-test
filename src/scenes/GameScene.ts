@@ -14,6 +14,7 @@ const FALL_SPEED_INCREASE = 12;
 const BASE_SPAWN_INTERVAL = 900;
 const MIN_SPAWN_INTERVAL = 320;
 const COIN_CHANCE = 0.22;
+const COIN_SCALE = 0.55;
 
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -143,7 +144,8 @@ export class GameScene extends Phaser.Scene {
 
     if (spawnType === 'coin') {
       const coin = this.coins.create(x, y, COIN_1) as Phaser.Physics.Arcade.Image;
-      const coinRadius = Math.min(coin.width, coin.height) * 0.35;
+      coin.setScale(COIN_SCALE);
+      const coinRadius = Math.min(coin.width, coin.height) / 2;
       coin.setCircle(coinRadius);
       coin.setOffset((coin.width - coinRadius * 2) / 2, (coin.height - coinRadius * 2) / 2);
       coin.setVelocityY(fallSpeed * 0.9);
